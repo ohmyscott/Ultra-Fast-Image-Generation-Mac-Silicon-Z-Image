@@ -27,7 +27,16 @@ Tested on **Mac M2 Max (32GB)**:
 
 Uses [Disty0/Z-Image-Turbo-SDNQ-uint4-svd-r32](https://huggingface.co/Disty0/Z-Image-Turbo-SDNQ-uint4-svd-r32) - a 4-bit quantized version of Alibaba's [Z-Image Turbo](https://github.com/Tongyi-MAI/Z-Image) (6B parameter diffusion transformer).
 
-## Installation
+## Quick Start (1-Click)
+
+1. Download/clone the repo
+2. **Double-click `Launch.command`**
+3. First run will auto-install dependencies (~5 min)
+4. Browser opens automatically to the UI
+
+That's it! The launcher handles everything.
+
+## Manual Installation
 
 ```bash
 # Clone the repo
@@ -35,7 +44,7 @@ git clone https://github.com/newideas99/Ultra-Fast-Image-Generation-Mac-Silicon-
 cd Ultra-Fast-Image-Generation-Mac-Silicon-Z-Image
 
 # Create virtual environment
-python -m venv venv
+python3.11 -m venv venv
 source venv/bin/activate
 
 # Install dependencies
@@ -44,7 +53,9 @@ pip install -r requirements.txt
 
 ## Usage
 
-### Gradio Web UI
+### Gradio Web UI (Easiest)
+
+Double-click `Launch.command` or run:
 
 ```bash
 python app.py
