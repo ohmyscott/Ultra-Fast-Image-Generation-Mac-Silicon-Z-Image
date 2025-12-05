@@ -7,6 +7,12 @@ Fast image generation on Apple Silicon using the quantized uint4 model.
 import os
 os.environ["PYTORCH_MPS_FAST_MATH"] = "1"
 
+# Set up proxy if environment variables are available
+proxy_vars = ['https_proxy', 'http_proxy', 'all_proxy']
+for var in proxy_vars:
+    if var in os.environ:
+        os.environ[var.upper()] = os.environ[var]
+
 import torch
 import sdnq
 import gradio as gr
@@ -49,7 +55,7 @@ def load_pipeline(device="mps"):
 
     pipe = ZImagePipeline.from_pretrained(
         "Disty0/Z-Image-Turbo-SDNQ-uint4-svd-r32",
-        torch_dtype=dtype,
+        dtype=dtype,
         low_cpu_mem_usage=True,
     )
 

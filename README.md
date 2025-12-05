@@ -52,12 +52,15 @@ That's it! The launcher handles everything.
 git clone https://github.com/newideas99/Ultra-Fast-Image-Generation-Mac-Silicon-Z-Image.git
 cd Ultra-Fast-Image-Generation-Mac-Silicon-Z-Image
 
-# Create virtual environment
-python3.11 -m venv venv
-source venv/bin/activate
+# Install uv (if not already installed)
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# (Optional) Set up proxy if you can't access Hugging Face directly
+cp proxy.env.example proxy.env
+# Edit proxy.env with your proxy settings
 
 # Install dependencies
-pip install -r requirements.txt
+uv sync
 ```
 
 ## Usage
@@ -67,7 +70,7 @@ pip install -r requirements.txt
 Double-click `Launch.command` or run:
 
 ```bash
-python app.py
+uv run app.py
 ```
 
 Then open http://localhost:7860 in your browser.
@@ -75,7 +78,7 @@ Then open http://localhost:7860 in your browser.
 ### Command Line
 
 ```bash
-python generate.py "A beautiful sunset over mountains"
+uv run generate.py "A beautiful sunset over mountains"
 ```
 
 Options:
@@ -87,7 +90,7 @@ Options:
 
 Example:
 ```bash
-python generate.py "Cyberpunk city at night, neon lights" --height 768 --width 768 --steps 7 --seed 42 --output cyberpunk.png
+uv run generate.py "Cyberpunk city at night, neon lights" --height 768 --width 768 --steps 7 --seed 42 --output cyberpunk.png
 ```
 
 ## Performance Tips
@@ -101,6 +104,40 @@ python generate.py "Cyberpunk city at night, neon lights" --height 768 --width 7
 - macOS with Apple Silicon (M1/M2/M3/M4)
 - Python 3.10+
 - **16GB+ unified memory required** (~15.5GB used during inference)
+
+## Troubleshooting
+
+### Model Download Issues
+
+If you can't download models from Hugging Face, set up a proxy:
+
+1. **Create proxy config:**
+   ```bash
+   cp proxy.env.example proxy.env
+   ```
+
+2. **Edit proxy.env with your settings:**
+   ```bash
+   # Example for local proxy
+   export https_proxy=http://127.0.0.1:7897
+   export http_proxy=http://127.0.0.1:7897
+   export all_proxy=socks5://127.0.0.1:7897
+   ```
+
+3. **Install dependencies with SOCKS support:**
+   ```bash
+   uv sync  # This includes httpx[socks] for SOCKS proxy support
+   ```
+
+4. **Restart the app** - the proxy settings will be automatically loaded.
+
+**Note:** If using SOCKS5 proxy, the required `socksio` package is already included in the dependencies.
+
+### Common Issues
+
+- **Error 502/Connection failed**: Usually a network connectivity issue, try the proxy setup above
+- **Memory issues**: Ensure you have 16GB+ unified memory
+- **Slow first generation**: Model loading takes 30-60s on first run
 
 ## Credits
 
