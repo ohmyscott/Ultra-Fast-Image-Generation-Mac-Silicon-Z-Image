@@ -74,7 +74,7 @@ def update_image_dimensions(ratio_name):
 
 
 def create_aspect_ratio_html(ratios, selected_ratio="1:1 Square"):
-    """Create HTML for visual aspect ratio selector using 4x2 grid layout."""
+    """Create HTML for visual aspect ratio selector using simple approach."""
     html_content = """
     <style>
         .aspect-selector {
@@ -185,7 +185,7 @@ def create_aspect_ratio_html(ratios, selected_ratio="1:1 Square"):
         radio_dot = '<div class="aspect-radio-dot"></div>' if selected_class else ''
 
         html_content += f"""
-        <button class="aspect-btn {selected_class}" data-ratio="{ratio_name}">
+        <button class="aspect-btn {selected_class}" onclick="window.selectRatio('{ratio_name}')">
             <div class="aspect-preview">
                 <div class="aspect-box" style="width: {width:.2f}px; height: {height:.2f}px;"></div>
             </div>
@@ -200,78 +200,37 @@ def create_aspect_ratio_html(ratios, selected_ratio="1:1 Square"):
     </div>
 
     <script>
-        function initAspectButtons() {
-            console.log('Initializing aspect buttons...');
-            // Add click handlers to all aspect buttons
+        window.selectRatio = function(ratioName) {
+            console.log('Selecting ratio:', ratioName);
+
+            // Update visual state
             const buttons = document.querySelectorAll('.aspect-btn');
-            console.log('Found buttons:', buttons.length);
-
-            buttons.forEach((button, index) => {
-                // Remove existing listeners to avoid duplicates
-                button.replaceWith(button.cloneNode(true));
+            buttons.forEach(btn => {
+                btn.classList.remove('selected');
+                const dot = btn.querySelector('.aspect-radio-dot');
+                if (dot) dot.remove();
             });
 
-            // Re-select after cloning
-            const freshButtons = document.querySelectorAll('.aspect-btn');
-            freshButtons.forEach((button, index) => {
-                button.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    e.stopPropagation();
+            // Find clicked button and update its state
+            const clickedBtn = document.querySelector(`button[onclick="window.selectRatio('${ratioName}')"]`);
+            if (clickedBtn) {
+                clickedBtn.classList.add('selected');
+                const radioDiv = clickedBtn.querySelector('.aspect-radio');
+                if (radioDiv) {
+                    radioDiv.innerHTML = '<div class="aspect-radio-dot"></div>';
+                }
+            }
 
-                    const ratioName = this.getAttribute('data-ratio');
-                    console.log('Clicked ratio:', ratioName);
-
-                    // Update visual state
-                    freshButtons.forEach(btn => {
-                        btn.classList.remove('selected');
-                        const dot = btn.querySelector('.aspect-radio-dot');
-                        if (dot) dot.remove();
-                    });
-
-                    this.classList.add('selected');
-
-                    // Update radio dot
-                    const radioDiv = this.querySelector('.aspect-radio');
-                    if (radioDiv) {
-                        radioDiv.innerHTML = '<div class="aspect-radio-dot"></div>';
-                    }
-
-                    // Find and trigger gradio radio input
-                    setTimeout(() => {
-                        const radioInputs = document.querySelectorAll('#aspect_radio input[type="radio"]');
-                        radioInputs.forEach(input => {
-                            if (input.value === ratioName) {
-                                console.log('Found and clicking radio for:', ratioName);
-                                input.checked = true;
-                                input.dispatchEvent(new Event('change', { bubbles: true }));
-                                input.dispatchEvent(new Event('click', { bubbles: true }));
-                                return;
-                            }
-                        });
-                    }, 50);
-                });
-            });
-        }
-
-        // Try multiple approaches to initialize
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', initAspectButtons);
-        } else {
-            initAspectButtons();
-        }
-
-        // Also try after a delay in case Gradio loads content asynchronously
-        setTimeout(initAspectButtons, 500);
-        setTimeout(initAspectButtons, 1000);
+            // Trigger Gradio change
+            const event = new CustomEvent('aspect-ratio-change', { detail: ratioName });
+            document.dispatchEvent(event);
+        };
     </script>
     """
 
     return html_content
 
 
-def update_aspect_ratio_html(selected_ratio):
-    """Update the HTML when aspect ratio changes."""
-    return create_aspect_ratio_html(ASPECT_RATIOS, selected_ratio)
 
 
 def get_available_devices():
@@ -374,18 +333,10 @@ with gr.Blocks(title="Z-Image Turbo UINT4") as demo:
                 lines=3,
             )
 
-            # Hidden radio button for aspect ratio (to maintain gradio state)
+            # Aspect ratio selection with radio buttons
             aspect_ratio = gr.Radio(
                 choices=list(ASPECT_RATIOS.keys()),
                 value="1:1 Square",
-                label="Aspect Ratio",
-                visible=False,
-                elem_id="aspect_radio"
-            )
-
-            # Visual aspect ratio selector
-            aspect_ratio_html = gr.HTML(
-                create_aspect_ratio_html(ASPECT_RATIOS, "1:1 Square"),
                 label="Aspect Ratio",
                 info="Select aspect ratio to auto-calculate dimensions"
             )
@@ -429,14 +380,6 @@ with gr.Blocks(title="Z-Image Turbo UINT4") as demo:
         fn=update_image_dimensions,
         inputs=[aspect_ratio],
         outputs=[height, width],
-    ).then(
-        fn=update_aspect_ratio_html,
-        inputs=[aspect_ratio],
-        outputs=[aspect_ratio_html],
-    ).then(
-        fn=lambda: None,  # Small delay to ensure HTML is updated
-        inputs=[],
-        outputs=[],
     )
 
     generate_btn.click(
