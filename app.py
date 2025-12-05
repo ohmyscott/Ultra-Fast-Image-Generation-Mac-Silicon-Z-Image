@@ -200,36 +200,69 @@ def create_aspect_ratio_html(ratios, selected_ratio="1:1 Square"):
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
+        function initAspectButtons() {
+            console.log('Initializing aspect buttons...');
             // Add click handlers to all aspect buttons
             const buttons = document.querySelectorAll('.aspect-btn');
-            buttons.forEach(button => {
-                button.addEventListener('click', function() {
+            console.log('Found buttons:', buttons.length);
+
+            buttons.forEach((button, index) => {
+                // Remove existing listeners to avoid duplicates
+                button.replaceWith(button.cloneNode(true));
+            });
+
+            // Re-select after cloning
+            const freshButtons = document.querySelectorAll('.aspect-btn');
+            freshButtons.forEach((button, index) => {
+                button.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+
                     const ratioName = this.getAttribute('data-ratio');
                     console.log('Clicked ratio:', ratioName);
 
                     // Update visual state
-                    buttons.forEach(btn => btn.classList.remove('selected'));
+                    freshButtons.forEach(btn => {
+                        btn.classList.remove('selected');
+                        const dot = btn.querySelector('.aspect-radio-dot');
+                        if (dot) dot.remove();
+                    });
+
                     this.classList.add('selected');
 
                     // Update radio dot
-                    document.querySelectorAll('.aspect-radio-dot').forEach(dot => dot.remove());
                     const radioDiv = this.querySelector('.aspect-radio');
                     if (radioDiv) {
                         radioDiv.innerHTML = '<div class="aspect-radio-dot"></div>';
                     }
 
-                    // Trigger gradio update
-                    const radioInput = document.querySelector('#aspect_radio input[value="' + ratioName + '"]');
-                    if (radioInput) {
-                        radioInput.click();
-                        console.log('Triggered radio input for:', ratioName);
-                    } else {
-                        console.error('Radio input not found for:', ratioName);
-                    }
+                    // Find and trigger gradio radio input
+                    setTimeout(() => {
+                        const radioInputs = document.querySelectorAll('#aspect_radio input[type="radio"]');
+                        radioInputs.forEach(input => {
+                            if (input.value === ratioName) {
+                                console.log('Found and clicking radio for:', ratioName);
+                                input.checked = true;
+                                input.dispatchEvent(new Event('change', { bubbles: true }));
+                                input.dispatchEvent(new Event('click', { bubbles: true }));
+                                return;
+                            }
+                        });
+                    }, 50);
                 });
             });
-        });
+        }
+
+        // Try multiple approaches to initialize
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initAspectButtons);
+        } else {
+            initAspectButtons();
+        }
+
+        // Also try after a delay in case Gradio loads content asynchronously
+        setTimeout(initAspectButtons, 500);
+        setTimeout(initAspectButtons, 1000);
     </script>
     """
 
@@ -400,6 +433,10 @@ with gr.Blocks(title="Z-Image Turbo UINT4") as demo:
         fn=update_aspect_ratio_html,
         inputs=[aspect_ratio],
         outputs=[aspect_ratio_html],
+    ).then(
+        fn=lambda: None,  # Small delay to ensure HTML is updated
+        inputs=[],
+        outputs=[],
     )
 
     generate_btn.click(
