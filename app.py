@@ -74,27 +74,26 @@ def update_image_dimensions(ratio_name):
 
 
 def create_aspect_ratio_html(ratios, selected_ratio="1:1 Square"):
-    """Create HTML for visual aspect ratio selector using button style."""
+    """Create HTML for visual aspect ratio selector using 4x2 grid layout."""
     html_content = """
     <style>
         .aspect-selector {
-            display: flex;
-            flex-direction: column;
-            gap: 2px;
-            overflow-y: auto;
-            background: transparent;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
             padding: 8px 0;
         }
         .aspect-btn {
             display: flex;
+            flex-direction: column;
             align-items: center;
-            gap: 12px;
-            padding: 10px 12px;
+            gap: 8px;
+            padding: 12px 8px;
             transition: all 0.15s ease;
-            text-align: left;
+            text-align: center;
             width: 100%;
             font-family: 'Courier New', 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
-            font-size: 11px;
+            font-size: 10px;
             font-weight: 500;
             text-transform: uppercase;
             letter-spacing: 0.05em;
@@ -103,6 +102,7 @@ def create_aspect_ratio_html(ratios, selected_ratio="1:1 Square"):
             color: #e5e7eb;
             cursor: pointer;
             border-radius: 6px;
+            min-height: 80px;
         }
         .aspect-btn:hover {
             border-color: rgba(156, 163, 175, 0.3);
@@ -112,6 +112,12 @@ def create_aspect_ratio_html(ratios, selected_ratio="1:1 Square"):
             border-color: rgba(59, 130, 246, 0.5);
             background: rgba(59, 130, 246, 0.05);
             color: #93c5fd;
+        }
+        .aspect-preview {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 24px;
         }
         .aspect-box {
             border: 2px solid currentColor;
@@ -125,7 +131,7 @@ def create_aspect_ratio_html(ratios, selected_ratio="1:1 Square"):
         }
         .aspect-label {
             font-weight: 500;
-            flex: 1;
+            font-size: 11px;
         }
         .aspect-radio {
             width: 16px;
@@ -150,6 +156,11 @@ def create_aspect_ratio_html(ratios, selected_ratio="1:1 Square"):
             background: #3b82f6;
             border-radius: 50%;
         }
+        @media (max-width: 768px) {
+            .aspect-selector {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
     </style>
 
     <div class="aspect-selector">
@@ -159,8 +170,8 @@ def create_aspect_ratio_html(ratios, selected_ratio="1:1 Square"):
         ratio_value = ratio_info["ratio"]
         selected_class = "selected" if ratio_name == selected_ratio else ""
 
-        # Calculate visual dimensions (base size 16px)
-        base_size = 16
+        # Calculate visual dimensions (base size 20px)
+        base_size = 20
         if ratio_value >= 1.0:  # Landscape or square
             width = base_size
             height = base_size / ratio_value
@@ -174,8 +185,10 @@ def create_aspect_ratio_html(ratios, selected_ratio="1:1 Square"):
         radio_dot = '<div class="aspect-radio-dot"></div>' if selected_class else ''
 
         html_content += f"""
-        <button class="aspect-btn {selected_class}" onclick="selectAspectRatio('{ratio_name}')">
-            <div class="aspect-box" style="width: {width:.2f}px; height: {height:.2f}px;"></div>
+        <button class="aspect-btn {selected_class}" data-ratio="{ratio_name}">
+            <div class="aspect-preview">
+                <div class="aspect-box" style="width: {width:.2f}px; height: {height:.2f}px;"></div>
+            </div>
             <span class="aspect-label">{ratio_text}</span>
             <div class="aspect-radio">
                 {radio_dot}
@@ -187,13 +200,36 @@ def create_aspect_ratio_html(ratios, selected_ratio="1:1 Square"):
     </div>
 
     <script>
-        function selectAspectRatio(ratioName) {
-            // Trigger gradio update
-            const radioInput = document.querySelector('#aspect_radio input[value="' + ratioName + '"]');
-            if (radioInput) {
-                radioInput.click();
-            }
-        }
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add click handlers to all aspect buttons
+            const buttons = document.querySelectorAll('.aspect-btn');
+            buttons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const ratioName = this.getAttribute('data-ratio');
+                    console.log('Clicked ratio:', ratioName);
+
+                    // Update visual state
+                    buttons.forEach(btn => btn.classList.remove('selected'));
+                    this.classList.add('selected');
+
+                    // Update radio dot
+                    document.querySelectorAll('.aspect-radio-dot').forEach(dot => dot.remove());
+                    const radioDiv = this.querySelector('.aspect-radio');
+                    if (radioDiv) {
+                        radioDiv.innerHTML = '<div class="aspect-radio-dot"></div>';
+                    }
+
+                    // Trigger gradio update
+                    const radioInput = document.querySelector('#aspect_radio input[value="' + ratioName + '"]');
+                    if (radioInput) {
+                        radioInput.click();
+                        console.log('Triggered radio input for:', ratioName);
+                    } else {
+                        console.error('Radio input not found for:', ratioName);
+                    }
+                });
+            });
+        });
     </script>
     """
 
@@ -374,4 +410,4 @@ with gr.Blocks(title="Z-Image Turbo UINT4") as demo:
 
 
 if __name__ == "__main__":
-    demo.launch()
+    demo.launch(debug=True)
