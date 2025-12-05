@@ -73,6 +73,123 @@ def update_image_dimensions(ratio_name):
     return height, width
 
 
+def create_aspect_ratio_html(ratios, selected_ratio="1:1 Square"):
+    """Create HTML for visual aspect ratio selector."""
+    html_content = """
+    <style>
+        .aspect-ratio-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+            gap: 8px;
+            margin: 10px 0;
+        }
+        .aspect-ratio-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 8px;
+            border: 2px solid #4a5568;
+            border-radius: 8px;
+            background: #1a202c;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            color: #e2e8f0;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .aspect-ratio-btn:hover {
+            border-color: #3182ce;
+            background: #2d3748;
+        }
+        .aspect-ratio-btn.selected {
+            border-color: #63b3ed;
+            background: #2b6cb0;
+            color: #bee3f8;
+        }
+        .aspect-preview {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+        .aspect-box {
+            border: 2px solid currentColor;
+            background: currentColor;
+            opacity: 0.2;
+        }
+        .aspect-center {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            background: currentColor;
+            border-radius: 50%;
+        }
+        .ratio-label {
+            font-weight: 600;
+            font-size: 10px;
+        }
+    </style>
+
+    <div class="aspect-ratio-grid">
+    """
+
+    for ratio_name, ratio_info in ratios.items():
+        ratio_value = ratio_info["ratio"]
+        selected_class = "selected" if ratio_name == selected_ratio else ""
+
+        # Calculate visual dimensions for the preview box
+        max_visual_size = 40  # Maximum dimension in pixels
+        if ratio_value >= 1.0:  # Landscape or square
+            visual_width = max_visual_size
+            visual_height = max_visual_size / ratio_value
+        else:  # Portrait
+            visual_height = max_visual_size
+            visual_width = max_visual_size * ratio_value
+
+        # Ensure minimum size for visibility
+        visual_width = max(visual_width, 12)
+        visual_height = max(visual_height, 12)
+
+        # Extract ratio text from name (e.g., "16:9" from "16:9 Widescreen")
+        ratio_text = ratio_name.split()[0]
+
+        html_content += f"""
+        <div class="aspect-ratio-btn {selected_class}" onclick="selectAspectRatio('{ratio_name}')">
+            <div class="aspect-preview">
+                <div class="aspect-box" style="width: {visual_width}px; height: {visual_height}px;"></div>
+                <div class="aspect-center"></div>
+            </div>
+            <span class="ratio-label">{ratio_text}</span>
+        </div>
+        """
+
+    html_content += """
+    </div>
+
+    <script>
+        function selectAspectRatio(ratioName) {
+            // Update visual selection
+            const buttons = document.querySelectorAll('.aspect-ratio-btn');
+            buttons.forEach(btn => btn.classList.remove('selected'));
+            event.currentTarget.classList.add('selected');
+
+            // Trigger gradio update
+            gradio_app.querySelector('#aspect_radio input[value="' + ratioName + '"]').click();
+        }
+    </script>
+    """
+
+    return html_content
+
+
+def update_aspect_ratio_html(selected_ratio):
+    """Update the HTML when aspect ratio changes."""
+    return create_aspect_ratio_html(ASPECT_RATIOS, selected_ratio)
+
+
 def get_available_devices():
     """Get list of available devices."""
     devices = []
@@ -173,10 +290,18 @@ with gr.Blocks(title="Z-Image Turbo UINT4") as demo:
                 lines=3,
             )
 
-            # Aspect ratio selection
+            # Hidden radio button for aspect ratio (to maintain gradio state)
             aspect_ratio = gr.Radio(
                 choices=list(ASPECT_RATIOS.keys()),
                 value="1:1 Square",
+                label="Aspect Ratio",
+                visible=False,
+                elem_id="aspect_radio"
+            )
+
+            # Visual aspect ratio selector
+            aspect_ratio_html = gr.HTML(
+                create_aspect_ratio_html(ASPECT_RATIOS, "1:1 Square"),
                 label="Aspect Ratio",
                 info="Select aspect ratio to auto-calculate dimensions"
             )
@@ -220,6 +345,10 @@ with gr.Blocks(title="Z-Image Turbo UINT4") as demo:
         fn=update_image_dimensions,
         inputs=[aspect_ratio],
         outputs=[height, width],
+    ).then(
+        fn=update_aspect_ratio_html,
+        inputs=[aspect_ratio],
+        outputs=[aspect_ratio_html],
     )
 
     generate_btn.click(
