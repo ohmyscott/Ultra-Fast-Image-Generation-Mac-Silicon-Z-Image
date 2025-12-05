@@ -23,6 +23,56 @@ pipe = None
 current_device = None
 
 
+# Image aspect ratio presets
+ASPECT_RATIOS = {
+    "1:1 Square": {"ratio": 1.0, "description": "Square format"},
+    "4:3 Standard": {"ratio": 4/3, "description": "Standard photo"},
+    "3:4 Portrait": {"ratio": 3/4, "description": "Vertical portrait"},
+    "16:9 Widescreen": {"ratio": 16/9, "description": "Widescreen/landscape"},
+    "9:16 Story": {"ratio": 9/16, "description": "Instagram story"},
+    "3:2 Classic": {"ratio": 3/2, "description": "Classic 35mm"},
+    "2:3 Classic Portrait": {"ratio": 2/3, "description": "Classic portrait"},
+    "21:9 Cinema": {"ratio": 21/9, "description": "Ultra-wide cinema"},
+}
+
+
+def calculate_dimensions(ratio_name, max_size=1024):
+    """Calculate height and width based on aspect ratio and max size constraint."""
+    if ratio_name not in ASPECT_RATIOS:
+        return 768, 768  # Default fallback
+
+    ratio = ASPECT_RATIOS[ratio_name]["ratio"]
+
+    if ratio >= 1.0:  # Landscape or square
+        width = max_size
+        height = int(max_size / ratio)
+    else:  # Portrait
+        height = max_size
+        width = int(max_size * ratio)
+
+    # Ensure both dimensions are multiples of 64 (model requirement)
+    height = max(256, ((height + 31) // 32) * 32)
+    width = max(256, ((width + 31) // 32) * 32)
+
+    # Ensure we don't exceed max_size
+    if height > max_size:
+        height = max_size
+        width = int(height * ratio)
+        width = ((width + 31) // 32) * 32
+    elif width > max_size:
+        width = max_size
+        height = int(width / ratio)
+        height = ((height + 31) // 32) * 32
+
+    return height, width
+
+
+def update_image_dimensions(ratio_name):
+    """Update height and width sliders based on selected ratio."""
+    height, width = calculate_dimensions(ratio_name)
+    return height, width
+
+
 def get_available_devices():
     """Get list of available devices."""
     devices = []
@@ -123,6 +173,14 @@ with gr.Blocks(title="Z-Image Turbo UINT4") as demo:
                 lines=3,
             )
 
+            # Aspect ratio selection
+            aspect_ratio = gr.Radio(
+                choices=list(ASPECT_RATIOS.keys()),
+                value="1:1 Square",
+                label="Aspect Ratio",
+                info="Select aspect ratio to auto-calculate dimensions"
+            )
+
             with gr.Row():
                 height = gr.Slider(256, 1024, value=768, step=64, label="Height")
                 width = gr.Slider(256, 1024, value=768, step=64, label="Width")
@@ -155,6 +213,13 @@ with gr.Blocks(title="Z-Image Turbo UINT4") as demo:
             ["Abstract art, vibrant colors, fluid shapes, modern design"],
         ],
         inputs=[prompt],
+    )
+
+    # Aspect ratio change handler
+    aspect_ratio.change(
+        fn=update_image_dimensions,
+        inputs=[aspect_ratio],
+        outputs=[height, width],
     )
 
     generate_btn.click(
