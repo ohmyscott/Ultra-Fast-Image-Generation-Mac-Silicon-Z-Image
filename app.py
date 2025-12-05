@@ -74,96 +74,113 @@ def update_image_dimensions(ratio_name):
 
 
 def create_aspect_ratio_html(ratios, selected_ratio="1:1 Square"):
-    """Create HTML for visual aspect ratio selector."""
+    """Create HTML for visual aspect ratio selector using button style."""
     html_content = """
     <style>
-        .aspect-ratio-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
-            gap: 8px;
-            margin: 10px 0;
-        }
-        .aspect-ratio-btn {
+        .aspect-selector {
             display: flex;
             flex-direction: column;
-            align-items: center;
-            gap: 8px;
-            padding: 12px 8px;
-            border: 2px solid #4a5568;
-            border-radius: 8px;
-            background: #1a202c;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            color: #e2e8f0;
-            font-family: 'Courier New', monospace;
-            font-size: 11px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
+            gap: 2px;
+            overflow-y: auto;
+            background: transparent;
+            padding: 8px 0;
         }
-        .aspect-ratio-btn:hover {
-            border-color: #3182ce;
-            background: #2d3748;
-        }
-        .aspect-ratio-btn.selected {
-            border-color: #63b3ed;
-            background: #2b6cb0;
-            color: #bee3f8;
-        }
-        .aspect-preview {
+        .aspect-btn {
             display: flex;
             align-items: center;
-            justify-content: center;
-            position: relative;
+            gap: 12px;
+            padding: 10px 12px;
+            transition: all 0.15s ease;
+            text-align: left;
+            width: 100%;
+            font-family: 'Courier New', 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
+            font-size: 11px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            border: 2px solid transparent;
+            background: transparent;
+            color: #e5e7eb;
+            cursor: pointer;
+            border-radius: 6px;
+        }
+        .aspect-btn:hover {
+            border-color: rgba(156, 163, 175, 0.3);
+            background: rgba(55, 65, 81, 0.3);
+        }
+        .aspect-btn.selected {
+            border-color: rgba(59, 130, 246, 0.5);
+            background: rgba(59, 130, 246, 0.05);
+            color: #93c5fd;
         }
         .aspect-box {
             border: 2px solid currentColor;
-            background: currentColor;
-            opacity: 0.2;
+            flex-shrink: 0;
         }
-        .aspect-center {
-            position: absolute;
+        .aspect-btn:not(.selected) .aspect-box {
+            color: #9ca3af;
+        }
+        .aspect-btn.selected .aspect-box {
+            color: #93c5fd;
+        }
+        .aspect-label {
+            font-weight: 500;
+            flex: 1;
+        }
+        .aspect-radio {
+            width: 16px;
+            height: 16px;
+            border: 2px solid;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .aspect-btn:not(.selected) .aspect-radio {
+            border-color: rgba(156, 163, 175, 0.3);
+        }
+        .aspect-btn.selected .aspect-radio {
+            border-color: #3b82f6;
+            background: rgba(59, 130, 246, 0.2);
+        }
+        .aspect-radio-dot {
             width: 8px;
             height: 8px;
-            background: currentColor;
+            background: #3b82f6;
             border-radius: 50%;
-        }
-        .ratio-label {
-            font-weight: 600;
-            font-size: 10px;
         }
     </style>
 
-    <div class="aspect-ratio-grid">
+    <div class="aspect-selector">
     """
 
     for ratio_name, ratio_info in ratios.items():
         ratio_value = ratio_info["ratio"]
         selected_class = "selected" if ratio_name == selected_ratio else ""
 
-        # Calculate visual dimensions for the preview box
-        max_visual_size = 40  # Maximum dimension in pixels
+        # Calculate visual dimensions (base size 16px)
+        base_size = 16
         if ratio_value >= 1.0:  # Landscape or square
-            visual_width = max_visual_size
-            visual_height = max_visual_size / ratio_value
+            width = base_size
+            height = base_size / ratio_value
         else:  # Portrait
-            visual_height = max_visual_size
-            visual_width = max_visual_size * ratio_value
+            height = base_size
+            width = base_size * ratio_value
 
-        # Ensure minimum size for visibility
-        visual_width = max(visual_width, 12)
-        visual_height = max(visual_height, 12)
-
-        # Extract ratio text from name (e.g., "16:9" from "16:9 Widescreen")
+        # Extract ratio text (e.g., "16:9" from "16:9 Widescreen")
         ratio_text = ratio_name.split()[0]
 
+        radio_dot = '<div class="aspect-radio-dot"></div>' if selected_class else ''
+
         html_content += f"""
-        <div class="aspect-ratio-btn {selected_class}" onclick="selectAspectRatio('{ratio_name}')">
-            <div class="aspect-preview">
-                <div class="aspect-box" style="width: {visual_width}px; height: {visual_height}px;"></div>
-                <div class="aspect-center"></div>
+        <button class="aspect-btn {selected_class}" onclick="selectAspectRatio('{ratio_name}')">
+            <div class="aspect-box" style="width: {width:.2f}px; height: {height:.2f}px;"></div>
+            <span class="aspect-label">{ratio_text}</span>
+            <div class="aspect-radio">
+                {radio_dot}
             </div>
-            <span class="ratio-label">{ratio_text}</span>
-        </div>
+        </button>
         """
 
     html_content += """
@@ -171,13 +188,11 @@ def create_aspect_ratio_html(ratios, selected_ratio="1:1 Square"):
 
     <script>
         function selectAspectRatio(ratioName) {
-            // Update visual selection
-            const buttons = document.querySelectorAll('.aspect-ratio-btn');
-            buttons.forEach(btn => btn.classList.remove('selected'));
-            event.currentTarget.classList.add('selected');
-
             // Trigger gradio update
-            gradio_app.querySelector('#aspect_radio input[value="' + ratioName + '"]').click();
+            const radioInput = document.querySelector('#aspect_radio input[value="' + ratioName + '"]');
+            if (radioInput) {
+                radioInput.click();
+            }
         }
     </script>
     """
